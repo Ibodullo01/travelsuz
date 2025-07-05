@@ -22,3 +22,5 @@ rpds-py==0.25.1
 sqlparse==0.5.3
 typing_extensions==4.14.0
 uritemplate==4.2.0
+django-cors-headers==4.7.0
+
