@@ -25,12 +25,17 @@ language_param = openapi.Parameter(
     default='uz'
 )
 
+
 class RestaurantListView(ListAPIView):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = RestaurantsFilter
     search_fields = ['title', 'description']
+
+    @swagger_auto_schema(tags=["Restaurant"])
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         lang = self.request.query_params.get('lang', 'uz')
@@ -40,12 +45,16 @@ class RestaurantListView(ListAPIView):
         return Restaurant.objects.all()
 
 
-
 class RestaurantCreateView(CreateAPIView):
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantCreateSerializer
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(tags=["Restaurant"])
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
 
 class RestaurantUpdateView(UpdateAPIView):
     queryset = Restaurant.objects.all()
@@ -61,16 +70,28 @@ class RestaurantUpdateView(UpdateAPIView):
         except Restaurant.DoesNotExist:
             raise NotFound(detail="Bunday restoran topilmadi.", code=404)
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)  # PATCH bo'lsa qisman update
+    @swagger_auto_schema(tags=["Restaurant"])
+    def put(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response({
-            "detail": "Restoran ma'lumotlari yangilandi",
+            "detail": "Restoran ma'lumotlari to‘liq yangilandi",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(tags=["Restaurant"])
+    def patch(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            "detail": "Restoran ma'lumotlari qisman yangilandi",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
 
 class RestaurantDeleteView(DestroyAPIView):
     queryset = Restaurant.objects.all()
@@ -84,6 +105,7 @@ class RestaurantDeleteView(DestroyAPIView):
         except Restaurant.DoesNotExist:
             raise NotFound(detail="Bunday restoran topilmadi.")
 
+    @swagger_auto_schema(tags=["Restaurant"])
     def delete(self, request, *args, **kwargs):
         restaurant = self.get_object()
 
@@ -98,7 +120,6 @@ class RestaurantDeleteView(DestroyAPIView):
             {"detail": f"{restaurant.name_uz} restorani muvaffaqiyatli o‘chirildi."},
             status=status.HTTP_200_OK
         )
-
 restaurant_delete_view = RestaurantDeleteView.as_view()
 restaurant_update_view = RestaurantUpdateView.as_view()
 restaurant_create_view = RestaurantCreateView.as_view()

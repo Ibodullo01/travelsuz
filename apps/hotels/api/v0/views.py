@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework import status
@@ -14,10 +15,6 @@ from .serializers import (HotelSerializer, HotelCreateSerializer,
                           RegionSerializer, RegionCreateSerializer,
                           HotelUpdateSerializer)
 
-
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
-from drf_spectacular.types import OpenApiTypes
-
 from django.utils import translation
 
 
@@ -27,24 +24,7 @@ class HotelListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = HotelFilter
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name='region',
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description='Region ID bo‘yicha filter'
-            ),
-            OpenApiParameter(
-                name='lang',
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description='Tilni belgilang: uz, ru, en'
-            )
-        ]
-    )
+    @swagger_auto_schema(tags=["Hotels"])
     def get(self, request, *args, **kwargs):
         lang = request.query_params.get('lang')
         if lang in ['uz', 'ru', 'en']:
@@ -57,12 +37,17 @@ class HotelDetailView(RetrieveAPIView):
     serializer_class = HotelSerializer
     lookup_field = 'pk'
 
+
     def get_object(self):
         pk = self.kwargs.get("pk")
         try:
             return Hotel.objects.get(pk=pk)
         except Hotel.DoesNotExist:
             raise NotFound(detail="Bunday Hotel topilmadi.")
+
+    @swagger_auto_schema(tags=["Hotels"])
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 
 
@@ -71,6 +56,11 @@ class HotelCreateView(CreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = HotelCreateSerializer
     parser_classes = [MultiPartParser, FormParser]
+
+    @swagger_auto_schema(tags=["Hotels"])
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
 
 class HotelUpdateView(UpdateAPIView):
     queryset = Hotel.objects.all().order_by('id')
@@ -82,26 +72,35 @@ class HotelUpdateView(UpdateAPIView):
     def get_object(self):
         pk = self.kwargs.get("pk")
         try:
-            region = Regions.objects.get(pk=pk)
-        except Regions.DoesNotExist:
-            raise NotFound(detail="Bunday region topilmadi.")
+            hotel = Hotel.objects.get(pk=pk)
+        except Hotel.DoesNotExist:
+            raise NotFound(detail="Bunday hotel topilmadi.")
 
         if not self.request.user.is_staff:
             raise PermissionDenied("Sizda bu amalni bajarish huquqi yo‘q.")
+        return hotel
 
-        return region
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)
-        instance = self.get_object()  # Bu yerda yuqoridagi ruxsat va mavjudlik tekshiriladi
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+    @swagger_auto_schema(tags=["Hotels"])
+    def put(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response({
-            "detail": "Region ma'lumotlari muvaffaqiyatli yangilandi",
+            "detail": "Hotel ma'lumotlari to‘liq yangilandi",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(tags=["Hotels"])
+    def patch(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            "detail": "Hotel ma'lumotlari qisman yangilandi",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
 
 class HotelDeleteView(DestroyAPIView):
     queryset = Hotel.objects.all()
@@ -109,6 +108,7 @@ class HotelDeleteView(DestroyAPIView):
     parser_classes = (MultiPartParser, FormParser)
     lookup_field = 'pk'
 
+    @swagger_auto_schema(tags=["Hotels"])
     def get_object(self):
         pk = self.kwargs.get("pk")
         try:
@@ -116,6 +116,7 @@ class HotelDeleteView(DestroyAPIView):
         except Hotel.DoesNotExist:
             raise NotFound(detail="Bunday Hotel topilmadi.")
 
+    @swagger_auto_schema(tags=["Hotels"])
     def delete(self, request, pk):
         hotel = Hotel.objects.get(pk=pk)
         if not request.user.is_authenticated:
@@ -126,10 +127,12 @@ class HotelDeleteView(DestroyAPIView):
             return Response({"detail": f"{hotel.title} o‘chirildi."},
                         status=status.HTTP_200_OK)
 
+from drf_yasg.utils import swagger_auto_schema
+
 class RegionUpdateView(UpdateAPIView):
     queryset = Regions.objects.all().order_by('id')
     serializer_class = RegionSerializer
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     lookup_field = 'pk'
 
@@ -139,21 +142,29 @@ class RegionUpdateView(UpdateAPIView):
             region = Regions.objects.get(pk=pk)
         except Regions.DoesNotExist:
             raise NotFound(detail="Bunday region topilmadi.")
-
-
         if not self.request.user.is_authenticated:
             raise PermissionDenied("Sizda bu amalni bajarish huquqi yo‘q.")
-
         return region
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', True)
-        instance = self.get_object()  # Bu yerda yuqoridagi ruxsat va mavjudlik tekshiriladi
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+    @swagger_auto_schema(tags=["Region"])
+    def put(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response({
-            "detail": "Region ma'lumotlari muvaffaqiyatli yangilandi",
+            "detail": "Region ma'lumotlari to‘liq yangilandi",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(tags=["Region"])
+    def patch(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({
+            "detail": "Region ma'lumotlari qisman yangilandi",
             "data": serializer.data
         }, status=status.HTTP_200_OK)
 
@@ -161,6 +172,7 @@ class RegionsListView(ListAPIView):
     queryset = Regions.objects.all()
     serializer_class = RegionSerializer
 
+    @swagger_auto_schema(tags=["Region"])
     def get(self, request):
         lang = request.query_params.get('lang')
         if lang:
@@ -177,7 +189,7 @@ class RegionCreateView(CreateAPIView):
     serializer_class = RegionCreateSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-
+    @swagger_auto_schema(tags=["Region"])
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -188,6 +200,7 @@ class RegionDeleteView(DestroyAPIView):
     queryset = Regions.objects.all().order_by('id')
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Region"])
     def delete(self, request, pk):
         region = Regions.objects.get(pk=pk)
 
