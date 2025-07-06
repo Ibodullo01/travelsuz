@@ -1,39 +1,21 @@
 from tokenize import TokenError
-
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.generics import DestroyAPIView, CreateAPIView
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import AllowAny, IsAdminUser
-from rest_framework.schemas import openapi
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from rest_framework import status, permissions
-from django.contrib.auth import get_user_model
-from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
-from drf_yasg import openapi
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
-
-User = get_user_model()
-
-from rest_framework import status, permissions
-from rest_framework.generics import CreateAPIView, DestroyAPIView
+from rest_framework.generics import CreateAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
-
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from django.contrib.auth import get_user_model
-from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
+from .serializers import (RegisterSerializer, CustomTokenObtainPairSerializer,
+                          UserDetailSerializer)
+
 
 User = get_user_model()
 
@@ -61,7 +43,11 @@ class RegisterView(CreateAPIView):
                 'user': {
                     'id': user.id,
                     'username': user.username,
-                    'email': user.email
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'image': user.image.url,
+                    'phone_number': user.phone_number
                 }
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -132,6 +118,23 @@ class DeleteUserView(DestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
+        if user == request.user:
+            raise PermissionDenied("O'zingizni o'chira olmaysiz.")
         user.delete()
-        return Response({"message": "Foydalanuvchi o‘chirildi"},
-                        status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class UserDetailView(RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+
+    def get_object(self):
+        return self.request.user
+
+    @swagger_auto_schema(
+        tags=["Auth"],
+        operation_description="Login bo‘lgan foydalanuvchining profilini olish"
+    )
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)

@@ -152,6 +152,8 @@ SIMPLE_JWT = {
 }
 WSGI_APPLICATION = 'travelsuz_back.wsgi.application'
 
+# settings.py
+AUTH_USER_MODEL = 'users.CustomUser'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

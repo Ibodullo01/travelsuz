@@ -12,7 +12,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
+        fields = ('username', 'email', 'password',
+                  'first_name', 'last_name', 'image', 'phone_number')
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
@@ -23,3 +24,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data['message'] =("Tizimga muvaffaqiyatli kirdingiz")
         return data
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'image', 'phone_number']
