@@ -230,6 +230,7 @@ class HotelCommentCreateView(CreateAPIView):
 
 
 class HotelCommentListView(ListAPIView):
+    queryset = HotelComment.objects.all()
     serializer_class = HotelCommentSerializer
     permission_classes = [AllowAny]
     lookup_field = 'pk'
