@@ -19,5 +19,6 @@ env/
 .idea/
 .vscode/
 
-# Ignore all migrations folders
-**/migrations/
+# Ignore everything in migrations folders except __init__.py
+**/migrations/*
+!**/migrations/__init__.py
