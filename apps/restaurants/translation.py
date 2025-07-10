@@ -4,4 +4,4 @@ from .models import Regions, Restaurant
 
 @register(Restaurant)
 class RestaurantTranslationOptions(TranslationOptions):
-    fields = ('name', 'description', 'tag', 'address', 'category' , 'price_range')
+    fields = ('name', 'description','address', 'category' , 'price_range')

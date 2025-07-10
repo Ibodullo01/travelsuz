@@ -4,7 +4,7 @@ from .models import Regions, Hotel
 
 @register(Hotel)
 class HotelTranslationOptions(TranslationOptions):
-    fields = ('title', 'description', 'tag', 'address')
+    fields = ('title', 'description', 'address')
 
 @register(Regions)
 class RegionsTranslationOptions(TranslationOptions):

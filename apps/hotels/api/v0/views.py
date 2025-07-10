@@ -1,19 +1,19 @@
-from http import HTTPStatus
+from typing import Any
 
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from apps.hotels.models import Regions, Hotel
+from apps.hotels.models import Regions, Hotel, HotelComment
 from .filters import HotelFilter
 from .serializers import (HotelSerializer, HotelCreateSerializer,
                           RegionSerializer, RegionCreateSerializer,
-                          HotelUpdateSerializer)
+                          HotelUpdateSerializer, HotelCommentSerializer)
 
 from django.utils import translation
 
@@ -24,7 +24,7 @@ class HotelListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = HotelFilter
 
-    @swagger_auto_schema(tags=["Hotels"])
+    @extend_schema(tags=["Hotels"], summary="Hotellarni listini ko'rish")
     def get(self, request, *args, **kwargs):
         lang = request.query_params.get('lang')
         if lang in ['uz', 'ru', 'en']:
@@ -37,6 +37,11 @@ class HotelDetailView(RetrieveAPIView):
     serializer_class = HotelSerializer
     lookup_field = 'pk'
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.views += 1
+        instance.save(update_fields=["views"])
+        return super().retrieve(request, *args, **kwargs)
 
     def get_object(self):
         pk = self.kwargs.get("pk")
@@ -45,7 +50,7 @@ class HotelDetailView(RetrieveAPIView):
         except Hotel.DoesNotExist:
             raise NotFound(detail="Bunday Hotel topilmadi.")
 
-    @swagger_auto_schema(tags=["Hotels"])
+    @extend_schema(tags=["Hotels"], summary="Hotel ma'lumotlarini ko'rish")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -57,8 +62,8 @@ class HotelCreateView(CreateAPIView):
     serializer_class = HotelCreateSerializer
     parser_classes = [MultiPartParser, FormParser]
 
-    @swagger_auto_schema(tags=["Hotels"])
-    def post(self, request, *args, **kwargs):
+    @extend_schema(tags=["Hotels"], summary="Hotel create yaratish")
+    def post(self, request, *args: Any, **kwargs: Any) -> Response:
         return super().post(request, *args, **kwargs)
 
 
@@ -73,14 +78,12 @@ class HotelUpdateView(UpdateAPIView):
         pk = self.kwargs.get("pk")
         try:
             hotel = Hotel.objects.get(pk=pk)
+            return hotel
         except Hotel.DoesNotExist:
             raise NotFound(detail="Bunday hotel topilmadi.")
 
-        if not self.request.user.is_staff:
-            raise PermissionDenied("Sizda bu amalni bajarish huquqi yo‘q.")
-        return hotel
 
-    @swagger_auto_schema(tags=["Hotels"])
+    @extend_schema(tags=["Hotels"], summary="Hotel update qilish ")
     def put(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=False)
@@ -91,7 +94,7 @@ class HotelUpdateView(UpdateAPIView):
             "data": serializer.data
         }, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(tags=["Hotels"])
+    @extend_schema(tags=["Hotels"], summary="Hotelni qisman update qilish")
     def patch(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -106,9 +109,10 @@ class HotelDeleteView(DestroyAPIView):
     queryset = Hotel.objects.all()
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
+    serializer_class = HotelSerializer
     lookup_field = 'pk'
 
-    @swagger_auto_schema(tags=["Hotels"])
+
     def get_object(self):
         pk = self.kwargs.get("pk")
         try:
@@ -116,7 +120,7 @@ class HotelDeleteView(DestroyAPIView):
         except Hotel.DoesNotExist:
             raise NotFound(detail="Bunday Hotel topilmadi.")
 
-    @swagger_auto_schema(tags=["Hotels"])
+    @extend_schema(tags=["Hotels"], summary="Hotelni o'chirish")
     def delete(self, request, pk):
         hotel = Hotel.objects.get(pk=pk)
         if not request.user.is_authenticated:
@@ -127,7 +131,7 @@ class HotelDeleteView(DestroyAPIView):
             return Response({"detail": f"{hotel.title} o‘chirildi."},
                         status=status.HTTP_200_OK)
 
-from drf_yasg.utils import swagger_auto_schema
+
 
 class RegionUpdateView(UpdateAPIView):
     queryset = Regions.objects.all().order_by('id')
@@ -146,7 +150,7 @@ class RegionUpdateView(UpdateAPIView):
             raise PermissionDenied("Sizda bu amalni bajarish huquqi yo‘q.")
         return region
 
-    @swagger_auto_schema(tags=["Region"])
+    @extend_schema(tags=["Region"] , summary="Region Update qilish")
     def put(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=False)
@@ -157,7 +161,7 @@ class RegionUpdateView(UpdateAPIView):
             "data": serializer.data
         }, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(tags=["Region"])
+    @extend_schema(tags=["Region"], summary="Region qisman Update qilish")
     def patch(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -172,7 +176,7 @@ class RegionsListView(ListAPIView):
     queryset = Regions.objects.all()
     serializer_class = RegionSerializer
 
-    @swagger_auto_schema(tags=["Region"])
+    @extend_schema(tags=["Region"], summary="Barcha regionlar listini chiqarish")
     def get(self, request):
         lang = request.query_params.get('lang')
         if lang:
@@ -189,7 +193,7 @@ class RegionCreateView(CreateAPIView):
     serializer_class = RegionCreateSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    @swagger_auto_schema(tags=["Region"])
+    @extend_schema(tags=["Region"], summary="Create region ")
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -199,8 +203,9 @@ class RegionCreateView(CreateAPIView):
 class RegionDeleteView(DestroyAPIView):
     queryset = Regions.objects.all().order_by('id')
     permission_classes = [IsAuthenticated]
+    serializer_class = RegionSerializer
 
-    @swagger_auto_schema(tags=["Region"])
+    @extend_schema(tags=["Region"], summary="Region Delete qilish")
     def delete(self, request, pk):
         region = Regions.objects.get(pk=pk)
 
@@ -211,9 +216,38 @@ class RegionDeleteView(DestroyAPIView):
         return Response({"detail": f"{region.name} o‘chirildi."},
                         status=status.HTTP_200_OK)
 
+class HotelCommentCreateView(CreateAPIView):
+    queryset = HotelComment.objects.all()
+    serializer_class = HotelCommentSerializer
+    permission_classes = [AllowAny]
+    parser_classes = (MultiPartParser, FormParser)
+
+    @extend_schema(tags=["Hotels"], summary="Create hotel comment")
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
 
 
 
+
+class HotelCommentListView(ListAPIView):
+    serializer_class = HotelCommentSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'pk'
+
+
+    def get_queryset(self):
+        hotel_id = self.kwargs['pk']
+        return HotelComment.objects.filter(hotel_id=hotel_id).order_by('-created_at')
+
+
+    @extend_schema(tags=["Hotels"], summary="List hotel comment")
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+
+hotel_comment_list_view = HotelCommentListView.as_view()
+hotel_comment_create_view = HotelCommentCreateView.as_view()
 hotel_delete_view = HotelDeleteView.as_view()
 hotel_create_view = HotelCreateView.as_view()
 hotel_detail_view = HotelDetailView.as_view()

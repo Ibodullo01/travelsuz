@@ -24,9 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-e^uv#i0n7^#v6blf-_ky0yi)&sn5q%gnwt6!q5_rhq56&hf3so'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['54.95.220.158']
+ALLOWED_HOSTS = ['54.95.220.158', '*']
 
 
 # Application definition
@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'rest_framework',
     'rest_framework_simplejwt',
-    'drf_yasg',
     'django_filters',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
@@ -56,7 +55,6 @@ INSTALLED_APPS = [
     'apps.hotels',
     'apps.travels',
     'apps.restaurants',
-    'apps.dashboard',
     'apps.users',
 
 
@@ -214,7 +212,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 SPECTACULAR_SETTINGS = {
+    'TITLE': 'Travels Uz API',
+    'DESCRIPTION': 'This project Travels Uz API data is protected.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,  # bu POST/PUT uchun form-data alohida qilinadi
     'PREPROCESSING_HOOKS': [],
     'POSTPROCESSING_HOOKS': [],
+    # OTHER SETTINGS
 }

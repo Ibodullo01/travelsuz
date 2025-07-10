@@ -4,4 +4,5 @@ from .models import Travel
 
 @register(Travel)
 class TravelTranslationOptions(TranslationOptions):
-    fields = ('title', 'description', 'address', 'place_type')
+    fields = ('title', 'description', 'address')
+
